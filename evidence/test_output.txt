@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.2, pluggy-1.6.0 -- /home/robotics1025/Documents/keith/project/Library_Book_Borrowing_System/.venv/bin/python
+rootdir: /home/robotics1025/Documents/keith/project/Library_Book_Borrowing_System
+configfile: pyproject.toml
+testpaths: tests
+collecting ... collected 8 items
+
+tests/application/borrowing/test_borrow_book.py::test_t7_borrowing_a_book_records_the_borrowing_through_the_event PASSED [ 12%]
+tests/application/borrowing/test_borrow_book.py::test_t8_the_borrower_account_rejects_the_follow_up_at_its_limit PASSED [ 25%]
+tests/domain/book_items/test_book_item.py::test_t3_an_available_book_item_can_be_borrowed PASSED [ 37%]
+tests/domain/book_items/test_book_item.py::test_t4_a_borrowed_book_item_cannot_be_borrowed_again PASSED [ 50%]
+tests/domain/book_items/value_objects/test_isbn.py::test_t1_a_valid_isbn_is_accepted PASSED [ 62%]
+tests/domain/book_items/value_objects/test_isbn.py::test_t2_an_isbn_with_a_wrong_check_digit_is_rejected PASSED [ 75%]
+tests/domain/borrower_accounts/services/test_loan_due_date_service.py::test_t6_the_due_date_depends_on_the_borrowing_date_and_the_loan_policy PASSED [ 87%]
+tests/domain/borrower_accounts/test_borrower_account.py::test_t5_a_borrower_at_the_borrowing_limit_cannot_borrow_again PASSED [100%]
+
+============================== 8 passed in 0.07s ===============================

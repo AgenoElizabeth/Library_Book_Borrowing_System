@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.2, pluggy-1.6.0 -- /home/robotics1025/Documents/keith/project/Library_Book_Borrowing_System/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/robotics1025/Documents/keith/project/Library_Book_Borrowing_System
+configfile: pyproject.toml
+testpaths: tests
+collecting ... collected 1 item
+
+tests/domain/book_items/test_book_item.py::test_t3_an_available_book_item_can_be_borrowed PASSED [100%]
+
+============================== 1 passed in 0.02s ===============================

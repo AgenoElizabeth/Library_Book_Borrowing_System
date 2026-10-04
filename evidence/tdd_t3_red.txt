@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.2, pluggy-1.6.0 -- /home/robotics1025/Documents/keith/project/Library_Book_Borrowing_System/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/robotics1025/Documents/keith/project/Library_Book_Borrowing_System
+configfile: pyproject.toml
+testpaths: tests
+collecting ... collected 1 item
+
+tests/domain/book_items/test_book_item.py::test_t3_an_available_book_item_can_be_borrowed FAILED [100%]
+
+=================================== FAILURES ===================================
+________________ test_t3_an_available_book_item_can_be_borrowed ________________
+
+    def test_t3_an_available_book_item_can_be_borrowed() -> None:
+        # T3 - BR2: an AVAILABLE BookItem becomes BORROWED.
+        # Arrange
+        book_item = BookItem("BI001", ISBN("978-0132350884"))
+    
+        # Act
+        book_item.borrow("ST123", date(2026, 10, 1), date(2026, 10, 15))
+    
+        # Assert
+>       assert book_item.status is BookItemStatus.BORROWED
+E       AssertionError: assert <BookItemStatus.AVAILABLE: 'AVAILABLE'> is <BookItemStatus.BORROWED: 'BORROWED'>
+E        +  where <BookItemStatus.AVAILABLE: 'AVAILABLE'> = <library_borrowing.domain.book_items.book_item.BookItem object at 0x7faa6b548170>.status
+E        +  and   <BookItemStatus.BORROWED: 'BORROWED'> = BookItemStatus.BORROWED
+
+tests/domain/book_items/test_book_item.py:16: AssertionError
+=========================== short test summary info ============================
+FAILED tests/domain/book_items/test_book_item.py::test_t3_an_available_book_item_can_be_borrowed
+============================== 1 failed in 0.09s ===============================
