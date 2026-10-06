@@ -11,3 +11,5 @@ class BorrowBookOutputDTO:
     student_id: str
     due_date: date | None
     message: str
+    book_title: str | None = None
+
