@@ -24,10 +24,12 @@ class BookItem(AggregateRoot):
         self,
         book_item_id: str,
         isbn: ISBN,
+        title: str = "Untitled Computer Science Book",
         status: BookItemStatus = BookItemStatus.AVAILABLE,
     ) -> None:
         super().__init__(book_item_id)
         self._isbn = isbn
+        self._title = title
         self._status = status
 
     @property
@@ -35,6 +37,12 @@ class BookItem(AggregateRoot):
         """Return the ISBN shared by every copy of this book."""
 
         return self._isbn
+
+    @property
+    def title(self) -> str:
+        """Return the title of this book."""
+
+        return self._title
 
     @property
     def status(self) -> BookItemStatus:

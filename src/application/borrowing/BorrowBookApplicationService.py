@@ -66,6 +66,7 @@ class BorrowBookApplicationService:
             student_id=request.student_id,
             due_date=due_date,
             message="Book borrowed successfully.",
+            book_title=book_item.title,
         )
 
     @staticmethod

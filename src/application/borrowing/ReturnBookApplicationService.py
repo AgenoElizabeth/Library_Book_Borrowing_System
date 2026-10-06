@@ -43,6 +43,7 @@ class ReturnBookApplicationService:
             book_item_id=request.book_item_id,
             student_id=request.student_id,
             message="Book returned successfully.",
+            book_title=book_item.title,
         )
 
     @staticmethod
