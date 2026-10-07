@@ -30,6 +30,11 @@ class BorrowerAccount(AggregateRoot):
         self._active_borrowings: list[Borrowing] = []
 
     @property
+    def id(self) -> str:
+        """Return the string student/staff identity of this BorrowerAccount."""
+        return str(self._id)
+
+    @property
     def borrower_type(self) -> BorrowerType:
         return self._borrower_type
 

@@ -33,6 +33,11 @@ class BookItem(AggregateRoot):
         self._status = status
 
     @property
+    def id(self) -> str:
+        """Return the string identity of this BookItem."""
+        return str(self._id)
+
+    @property
     def isbn(self) -> ISBN:
         """Return the ISBN shared by every copy of this book."""
 

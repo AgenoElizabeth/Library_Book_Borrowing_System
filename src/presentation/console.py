@@ -6,18 +6,21 @@ Handles input normalization, smart ID formatting, and clear error messaging.
 """
 
 import re
+import sys
 from src.application.borrowing.BookBorrowedHandler import BookBorrowedHandler
 from src.application.borrowing.BorrowBookApplicationService import BorrowBookApplicationService
 from src.application.borrowing.BorrowBookInputDTO import BorrowBookInputDTO
 from src.application.borrowing.ReturnBookApplicationService import ReturnBookApplicationService
 from src.application.borrowing.ReturnBookInputDTO import ReturnBookInputDTO
 from src.domain.book_items.BookItem import BookItem
+from src.domain.book_items.value_objects.BookItemStatus import BookItemStatus
 from src.domain.book_items.value_objects.ISBN import ISBN
 from src.domain.borrower_accounts.BorrowerAccount import BorrowerAccount
 from src.domain.borrower_accounts.services.LoanDueDateService import LoanDueDateService
 from src.domain.borrower_accounts.value_objects.BorrowerType import BorrowerType
 from src.infrastructure.persistence.InMemoryBookItemRepository import InMemoryBookItemRepository
 from src.infrastructure.persistence.InMemoryBorrowerAccountRepository import InMemoryBorrowerAccountRepository
+
 
 CS_TITLES = [
     "Clean Code: A Handbook of Agile Software Craftsmanship",
@@ -90,45 +93,70 @@ def seed_data(book_items: InMemoryBookItemRepository, borrower_accounts: InMemor
 
 
 def normalize_book_id(raw_input: str) -> str:
-    """Convert flexible input like '1', 'bi1', 'BI5' into standard 'BI001' format."""
-    val = raw_input.strip().upper()
-    if val.isdigit():
-        return f"BI{int(val):03d}"
-    match = re.match(r"^BI(\d+)$", val)
-    if match:
-        return f"BI{int(match.group(1)):03d}"
-    return val
+    """Normalize user input to uppercase while preserving standard ID format (e.g. 'bi001' -> 'BI001')."""
+    return raw_input.strip().upper()
 
 
 def normalize_borrower_id(raw_input: str) -> str:
-    """Convert flexible input like '1', 'st1', 'sf2' into standard 'ST001' or 'SF002' format."""
-    val = raw_input.strip().upper()
-    if val.isdigit():
-        return f"ST{int(val):03d}"
-    match_st = re.match(r"^ST(\d+)$", val)
-    if match_st:
-        return f"ST{int(match_st.group(1)):03d}"
-    match_sf = re.match(r"^SF(\d+)$", val)
-    if match_sf:
-        return f"SF{int(match_sf.group(1)):03d}"
-    return val
+    """Normalize user input to uppercase while preserving standard ID format (e.g. 'st001' -> 'ST001')."""
+    return raw_input.strip().upper()
+
+
+
+def parse_category_selection(cat_input: str) -> BorrowerType:
+    """Parse user category choice (1 for STUDENT, 2 for STAFF)."""
+    val = cat_input.strip().lower()
+    if val in ("2", "staff", "stf", "f", "sf"):
+        return BorrowerType.STAFF
+    return BorrowerType.STUDENT
 
 
 def parse_borrower_type(type_input: str, student_id: str) -> tuple[BorrowerType, int]:
     """Parse borrower category choice with smart fallback based on ID prefix."""
-    val = type_input.strip().lower()
-    if val in ("2", "staff", "stf", "f", "sf"):
-        return BorrowerType.STAFF, 5
-    if val in ("1", "student", "st", "s"):
-        return BorrowerType.STUDENT, 3
+    b_type = parse_category_selection(type_input)
+    limit = 5 if b_type == BorrowerType.STAFF else 3
+    return b_type, limit
 
-    # Smart fallback based on Borrower ID prefix (SF -> STAFF, ST -> STUDENT)
-    if student_id.upper().startswith("SF"):
-        return BorrowerType.STAFF, 5
-    return BorrowerType.STUDENT, 3
+
+def draw_top(title: str, width: int = 66) -> str:
+    """Draw a box top border with a title."""
+    header = f"┌─ {title} "
+    fill_len = max(0, width - len(header) - 1)
+    return header + ("─" * fill_len) + "┐"
+
+
+def draw_kv(key: str, value: object, width: int = 66) -> str:
+    """Draw a formatted key-value row within a box border."""
+    val_str = str(value) if value is not None else "N/A"
+    content = f"{key:<17}: {val_str}"
+    padding = max(0, width - 4 - len(content))
+    return f"│ {content}{' ' * padding} │"
+
+
+
+def draw_line(text: str, width: int = 66) -> str:
+    """Draw a text line within a box border."""
+    padding = max(0, width - 4 - len(text))
+    return f"│ {text}{' ' * padding} │"
+
+
+def draw_sep(width: int = 66) -> str:
+    """Draw a separator line within a box border."""
+    return "├" + ("─" * (width - 2)) + "┤"
+
+
+def draw_bottom(width: int = 66) -> str:
+    """Draw a box bottom border."""
+    return "└" + ("─" * (width - 2)) + "┘"
+
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     book_items = InMemoryBookItemRepository()
     borrower_accounts = InMemoryBorrowerAccountRepository()
 
@@ -191,8 +219,12 @@ def main() -> None:
             continue
 
         if user_choice in ("a", "account"):
-            raw_id = input("Enter Borrower ID (e.g. ST001, SF001, ST123): ")
+            raw_id = input("Enter Borrower ID (e.g. ST001 for Student, SF001 for Staff): ")
             borrower_id = normalize_borrower_id(raw_id)
+            if not (borrower_id.startswith("ST") or borrower_id.startswith("SF")):
+                print(f"\n❌ INVALID BORROWER ID FORMAT: Borrower ID '{borrower_id}' must start with 'ST' for Students (e.g. ST001) or 'SF' for Staff (e.g. SF001).")
+                continue
+
             account = borrower_accounts.find_by_id(borrower_id)
             if account is None:
                 print(f"Error: BorrowerAccount '{borrower_id}' does not exist.")
@@ -202,128 +234,197 @@ def main() -> None:
                 limit = account.borrowing_limit
                 remaining = limit - active_count
                 b_type_name = account.borrower_type.name
-                
-                print(f"\n┌──────────────────────────────────────────────────────────────────┐")
-                print(f"│ 👤 BORROWER ACCOUNT DETAILS & QUOTA STATUS                        │")
-                print(f"├──────────────────────────────────────────────────────────────────┤")
-                print(f"│  Borrower ID   : {account.id:<48} │")
-                print(f"│  Account Type  : {b_type_name:<48} │")
-                print(f"│  Quota Progress: {active_count} / {limit} Books Borrowed ({remaining} quota remaining){' ' * (18 - len(str(active_count)) - len(str(limit)) - len(str(remaining)))} │")
-                print(f"├──────────────────────────────────────────────────────────────────┤")
+
+                print(f"\n{draw_top('👤 BORROWER ACCOUNT DETAILS & QUOTA STATUS')}")
+                print(draw_kv("Borrower ID", account.id))
+                print(draw_kv("Account Type", b_type_name))
+                print(draw_kv("Quota Progress", f"{active_count} / {limit} Books ({remaining} remaining)"))
+                print(draw_sep())
                 if not account.active_borrowings:
-                    print(f"│  Active Borrowings: (None - 0 active loans){' ' * 24} │")
+                    print(draw_line("  Active Loans   : (None - 0 active loans)"))
                 else:
-                    print(f"│  Active Borrowings ({active_count} on loan):{' ' * 36} │")
+                    print(draw_line(f"  Active Loans ({active_count} on loan):"))
                     for b in account.active_borrowings:
                         book = book_items.find_by_id(b.book_item_id)
-                        title = book.title[:28] if book else "Unknown Title"
-                        print(f"│   • [{b.book_item_id}] '{title}' | Due: {b.due_date}{' ' * 4} │")
-                print(f"├──────────────────────────────────────────────────────────────────┤")
-                print(f"│ ⚠️ OVERDUE CONSEQUENCES & RULES:                                 │")
-                print(f"│  • Fine Rate  : $1.00/day (Student) | $0.50/day (Staff)          │")
-                print(f"│  • Penalties  : Accounts with overdue books are SUSPENDED from    │")
-                print(f"│                 borrowing further items until cleared.           │")
-                print(f"└──────────────────────────────────────────────────────────────────┘")
+                        title = book.title[:26] if book else "Unknown Title"
+                        print(draw_line(f"   • [{b.book_item_id}] '{title}' | Due: {b.due_date}"))
+                print(draw_sep())
+                print(draw_line(" ⚠️ OVERDUE CONSEQUENCES & RULES:"))
+                print(draw_line("  • Fine Rate  : $1.00/day (Student) | $0.50/day (Staff)"))
+                print(draw_line("  • Penalties  : Overdue accounts are SUSPENDED from borrowing"))
+                print(draw_line("                 until all past-due items are returned."))
+                print(draw_bottom())
             continue
 
-        if user_choice not in ("b", "borrow", "r", "return"):
-            print("Invalid command. Options: [b]orrow, [r]eturn, [s]earch, [l]ist, [a]ccount status, [q]uit.")
-            continue
+        if user_choice in ("b", "borrow"):
+            # Step 1: Ask if the borrower is a Student or Staff BEFORE anything else is done
+            print("\nSelect Borrower Category:")
+            print("  [1] Student  (Loan period: 14 days, Quota limit: 3 books)")
+            print("  [2] Staff    (Loan period: 28 days, Quota limit: 5 books)")
+            cat_choice = input("Is the borrower a Student or Staff member? (1 for Student / 2 for Staff): ")
 
-        raw_student_id = input("Enter Borrower ID (e.g. ST001, ST123, SF001): ")
-        raw_book_id = input("Enter BookItem ID (e.g. BI001 to BI100 or '1'): ")
+            chosen_type = parse_category_selection(cat_choice)
+            chosen_limit = 5 if chosen_type == BorrowerType.STAFF else 3
+            expected_prefix = "SF" if chosen_type == BorrowerType.STAFF else "ST"
+            category_name = "Staff" if chosen_type == BorrowerType.STAFF else "Student"
+            example_id = "SF001" if chosen_type == BorrowerType.STAFF else "ST001"
 
-        student_id = normalize_borrower_id(raw_student_id)
-        book_item_id = normalize_book_id(raw_book_id)
+            raw_student_id = input(f"Enter Borrower ID (e.g. {example_id}): ")
+            student_id = normalize_borrower_id(raw_student_id)
 
-        target_book = book_items.find_by_id(book_item_id)
-        if target_book is None:
-            print(f"Error: BookItem '{book_item_id}' does not exist. (Valid range: BI001 to BI100). Use [s]earch or [l]ist to find books.")
-            continue
+            # Strict Borrower ID Prefix Check
+            if not student_id.startswith(expected_prefix):
+                print(f"\n❌ INVALID BORROWER ID FORMAT: Borrower ID '{student_id}' does not have the required {category_name} prefix '{expected_prefix}'.")
+                print(f"   Transaction cancelled. Please enter a valid {category_name} ID (e.g. {example_id}).")
+                continue
 
-        target_account = borrower_accounts.find_by_id(student_id)
-        if target_account is None:
-            if user_choice in ("b", "borrow"):
+            target_account = borrower_accounts.find_by_id(student_id)
+
+            # Check existing account type mismatch
+            if target_account is not None and target_account.borrower_type != chosen_type:
+                print(f"\n❌ CATEGORY MISMATCH ERROR: BorrowerAccount '{student_id}' is registered as {target_account.borrower_type.name}, but '{chosen_type.name}' category was selected.")
+                print(f"   Transaction cancelled. Please select Option [{1 if target_account.borrower_type == BorrowerType.STUDENT else 2}] for {target_account.borrower_type.name}.")
+                continue
+
+            if target_account is None:
                 print(f"\n[NEW BORROWER REGISTRATION] BorrowerAccount '{student_id}' does not exist.")
-                reg_choice = input(f"Would you like to register new borrower '{student_id}' now? (y/n): ").strip().lower()
+                reg_choice = input(f"Register new {chosen_type.name} account '{student_id}' now? (y/n): ").strip().lower()
                 if reg_choice in ("y", "yes"):
-                    print("\nSelect Borrower Category:")
-                    print("  [1] Student  (Loan period: 14 days, Quota limit: 3 books)")
-                    print("  [2] Staff    (Loan period: 28 days, Quota limit: 5 books)")
-                    type_input = input("Enter choice (1 for Student / 2 for Staff): ")
-                    
-                    b_type, limit = parse_borrower_type(type_input, student_id)
-                    loan_days = 28 if b_type == BorrowerType.STAFF else 14
-                    
-                    # Create and save new borrower account
-                    new_account = BorrowerAccount(student_id, b_type, borrowing_limit=limit)
+                    new_account = BorrowerAccount(student_id, chosen_type, borrowing_limit=chosen_limit)
                     borrower_accounts.save(new_account)
                     target_account = new_account
-                    
-                    # Send structured eligibility notification
-                    print("\n┌──────────────────────────────────────────────────────────────────┐")
-                    print("│ 📩 OFFICIAL NOTIFICATION: NEW BORROWER REGISTRATION              │")
-                    print("├──────────────────────────────────────────────────────────────────┤")
-                    print(f"│  Borrower ID   : {student_id:<48} │")
-                    print(f"│  Account Type  : {b_type.name:<48} │")
-                    print(f"│  Loan Period   : {loan_days} Days per Book{' ' * 31} │")
-                    print(f"│  Quota Limit   : {limit} Active Borrowings{' ' * 30} │")
-                    print(f"│  Status        : ACTIVE & ELIGIBLE TO BORROW                     │")
-                    print("└──────────────────────────────────────────────────────────────────┘\n")
                 else:
                     print(f"Error: BorrowerAccount '{student_id}' does not exist. Borrowing cancelled.")
                     continue
-            else:
-                print(f"Error: BorrowerAccount '{student_id}' does not exist. Available IDs: Students (ST001-ST010, ST123), Staff (SF001-SF005).")
+
+
+            # Step 2: Prompt for BookItem ID
+            raw_book_id = input("\nEnter BookItem ID to borrow (e.g. BI001 to BI100): ")
+            book_item_id = normalize_book_id(raw_book_id)
+
+            target_book = book_items.find_by_id(book_item_id)
+            if target_book is None:
+                print(f"Error: BookItem '{book_item_id}' does not exist. (Valid range: BI001 to BI100). Use [s]earch or [l]ist to find books.")
                 continue
 
-        if user_choice in ("b", "borrow"):
+            # Step 3: Check Book Availability and Borrower Eligibility right after entering Book ID
+            active_count = len(target_account.active_borrowings)
+            limit = target_account.borrowing_limit
+            remaining = limit - active_count
+            b_type_name = target_account.borrower_type.name
+
+            is_book_available = target_book.status == BookItemStatus.AVAILABLE
+            is_borrower_eligible = remaining > 0
+
+            print(f"\n{draw_top('🔍 CHECKING BOOK AVAILABILITY & BORROWER ELIGIBILITY')}")
+            print(draw_kv("Book Item ID", book_item_id))
+            print(draw_kv("Book Title", target_book.title[:42]))
+            print(draw_kv("Book Status", f"{target_book.status.name} ({'Available' if is_book_available else 'Unavailable'})"))
+            print(draw_kv("Borrower ID", f"{student_id} ({b_type_name})"))
+            print(draw_kv("Quota Progress", f"{active_count} / {limit} Active Loans ({remaining} remaining)"))
+            print(draw_kv("Book Available?", "YES ✅" if is_book_available else "NO ❌ (Currently Borrowed)"))
+            print(draw_kv("Borrower Eligible?", "YES ✅" if is_borrower_eligible else "NO ❌ (Quota Limit Reached)"))
+            print(draw_bottom())
+
+            if not is_book_available:
+                print(f"\n❌ BOOK AVAILABILITY REJECTION: BookItem '{book_item_id}' is currently BORROWED and unavailable.")
+                print("   Transaction cancelled. Please choose an AVAILABLE book from inventory.")
+                continue
+
+            if not is_borrower_eligible:
+                print(f"\n❌ BORROWER ELIGIBILITY REJECTION: Borrower {student_id} has reached their maximum quota limit of {limit} books.")
+                print("   Transaction cancelled. Please return an active book before borrowing again.")
+                continue
+
+            # Step 4: Execute the actual borrowing
             result = borrow_book.execute(BorrowBookInputDTO(student_id, book_item_id))
             if result.success:
                 updated_account = borrower_accounts.find_by_id(student_id)
-                active_count = len(updated_account.active_borrowings) if updated_account else 1
-                limit = updated_account.borrowing_limit if updated_account else 3
-                remaining = limit - active_count
-                b_type_name = target_account.borrower_type.name
-                due_str = str(result.due_date) if result.due_date else "N/A"
+                new_active = len(updated_account.active_borrowings) if updated_account else active_count + 1
+                new_remaining = limit - new_active
+                due_str = result.due_date if result.due_date else "N/A"
                 fine_rate = "$0.50/day" if b_type_name == "STAFF" else "$1.00/day"
-                
-                print("\n┌──────────────────────────────────────────────────────────────────┐")
-                print("│ ✅ TRANSACTION SUCCESS: BOOK BORROWED                            │")
-                print("├──────────────────────────────────────────────────────────────────┤")
-                print(f"│  Borrower ID   : {student_id} ({b_type_name}){' ' * (41 - len(student_id) - len(b_type_name))} │")
-                print(f"│  Book Item ID  : {book_item_id:<48} │")
-                title_disp = target_book.title[:45]
-                print(f"│  Book Title    : '{title_disp}'{' ' * (45 - len(title_disp))} │")
-                print(f"│  Quota Progress: {active_count} / {limit} Active Loans ({remaining} remaining){' ' * (18 - len(str(active_count)) - len(str(limit)) - len(str(remaining)))} │")
-                print(f"├──────────────────────────────────────────────────────────────────┤")
-                print(f"│ ⏰ DUE DATE NOTIFICATION:                                         │")
-                print(f"│  • Return Deadline : {due_str:<45} │")
-                print(f"│  • Overdue Policy  : Fines accrue at {fine_rate} after deadline.    │")
-                print(f"│  • Late Penalty    : Account suspended if return is overdue.     │")
-                print("└──────────────────────────────────────────────────────────────────┘")
+
+                print(f"\n{draw_top('✅ TRANSACTION SUCCESS: BOOK BORROWED')}")
+                print(draw_kv("Borrower ID", f"{student_id} ({b_type_name})"))
+                print(draw_kv("Book Item ID", book_item_id))
+                print(draw_kv("Book Title", target_book.title[:42]))
+                print(draw_kv("Quota Progress", f"{new_active} / {limit} Active Loans ({new_remaining} remaining)"))
+                print(draw_sep())
+                print(draw_line(" ⏰ DUE DATE NOTIFICATION:"))
+                print(draw_line(f"  • Return Deadline : {due_str}"))
+                print(draw_line(f"  • Overdue Policy  : Fines accrue at {fine_rate} after deadline."))
+                print(draw_line("  • Late Penalty    : Account suspended if return is overdue."))
+                print(draw_bottom())
             else:
                 print(f"\n❌ FAILED TO BORROW: {result.message}")
-        else:
+
+
+        elif user_choice in ("r", "return"):
+            raw_student_id = input("Enter Borrower ID (e.g. ST001, SF001): ")
+            raw_book_id = input("Enter BookItem ID (e.g. BI001 to BI100): ")
+
+            student_id = normalize_borrower_id(raw_student_id)
+            book_item_id = normalize_book_id(raw_book_id)
+
+            if not (student_id.startswith("ST") or student_id.startswith("SF")):
+                print(f"\n❌ INVALID BORROWER ID FORMAT: Borrower ID '{student_id}' must start with 'ST' for Students (e.g. ST001) or 'SF' for Staff (e.g. SF001).")
+                continue
+
+
+            target_book = book_items.find_by_id(book_item_id)
+            if target_book is None:
+                print(f"Error: BookItem '{book_item_id}' does not exist. (Valid range: BI001 to BI100). Use [s]earch or [l]ist to find books.")
+                continue
+
+            target_account = borrower_accounts.find_by_id(student_id)
+            if target_account is None:
+                print(f"Error: BorrowerAccount '{student_id}' does not exist. Available IDs: Students (ST001-ST010, ST123), Staff (SF001-SF005).")
+                continue
+
             result = return_book.execute(ReturnBookInputDTO(student_id, book_item_id))
             if result.success:
                 updated_account = borrower_accounts.find_by_id(student_id)
                 active_count = len(updated_account.active_borrowings) if updated_account else 0
                 limit = updated_account.borrowing_limit if updated_account else 3
                 remaining = limit - active_count
-                
-                print("\n┌──────────────────────────────────────────────────────────────────┐")
-                print("│ ✅ TRANSACTION SUCCESS: BOOK RETURNED                            │")
-                print("├──────────────────────────────────────────────────────────────────┤")
-                print(f"│  Borrower ID   : {student_id:<48} │")
-                print(f"│  Book Item ID  : {book_item_id:<48} │")
-                title_disp = target_book.title[:45]
-                print(f"│  Book Title    : '{title_disp}'{' ' * (45 - len(title_disp))} │")
-                print(f"│  Book Status   : AVAILABLE (Restored to Library Inventory)       │")
-                print(f"│  Updated Quota : {active_count} / {limit} Active Loans ({remaining} remaining quota){' ' * (12 - len(str(active_count)) - len(str(limit)) - len(str(remaining)))} │")
-                print("└──────────────────────────────────────────────────────────────────┘")
+                b_type_name = target_account.borrower_type.name
+                fine_rate = "$0.50/day" if b_type_name == "STAFF" else "$1.00/day"
+
+                # Step 1: Check if due date had passed or not & send appropriate notification
+                if result.days_overdue > 0:
+                    print(f"\n{draw_top('⚠️ OFFICIAL NOTIFICATION: OVERDUE FINE ASSESSED')}")
+                    print(draw_kv("Borrower ID", student_id))
+                    print(draw_kv("Return Status", f"OVERDUE RETURN ({result.days_overdue} Days Late)"))
+                    print(draw_kv("Due Date", result.due_date))
+                    print(draw_kv("Return Date", result.return_date))
+                    print(draw_kv("Fine Rate", f"{fine_rate} ({b_type_name} Category)"))
+                    print(draw_kv("Fine Issued", f"${result.fine_amount:.2f} ISSUED TO ACCOUNT"))
+                    print(draw_line(" Notification  : Book was returned after the due date."))
+                    print(draw_line(f"                 A fine of ${result.fine_amount:.2f} has been charged."))
+                    print(f"{draw_bottom()}\n")
+                else:
+                    print(f"\n{draw_top('📩 OFFICIAL NOTIFICATION: RETURN COMPLIANCE CONFIRMED')}")
+                    print(draw_kv("Borrower ID", student_id))
+                    print(draw_kv("Return Status", "ON-TIME RETURN (ON OR BEFORE DUE DATE)"))
+                    print(draw_kv("Due Date", result.due_date))
+                    print(draw_kv("Return Date", result.return_date))
+                    print(draw_kv("Fine Accrued", "$0.00 (No Penalties Assessed)"))
+                    print(draw_line(" Notification  : Thank you for returning the book on time!"))
+                    print(f"{draw_bottom()}\n")
+
+                # Step 2: Show successful return and state that book is available for next borrowing
+                print(draw_top("✅ TRANSACTION SUCCESS: BOOK RETURNED"))
+                print(draw_kv("Borrower ID", student_id))
+                print(draw_kv("Book Item ID", book_item_id))
+                print(draw_kv("Book Title", target_book.title[:42]))
+                print(draw_kv("Book Status", "AVAILABLE (Restored to Library Inventory)"))
+                print(draw_kv("Updated Quota", f"{active_count} / {limit} Active Loans ({remaining} remaining quota)"))
+                print(draw_bottom())
             else:
                 print(f"\n❌ FAILED TO RETURN: {result.message}")
+        else:
+            print("Invalid command. Options: [b]orrow, [r]eturn, [s]earch, [l]ist, [a]ccount status, [q]uit.")
 
 
 if __name__ == "__main__":

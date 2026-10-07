@@ -1,0 +1,104 @@
+==================================================================
+      University Library System - Computer Science Section        
+==================================================================
+System initialized with 100 CS Book Items (BI001 - BI100).
+Available Borrower Accounts:
+  - Students (Limit 3, 14 days): ST001 to ST010, ST123
+  - Staff    (Limit 5, 28 days): SF001 to SF005
+
+------------------------------------------------------------------
+[b]orrow, [r]eturn, [s]earch, [l]ist books, [a]ccount status, or [q]uit: Enter Borrower ID (e.g. ST001 for Student, SF001 for Staff): 
+┌─ 👤 BORROWER ACCOUNT DETAILS & QUOTA STATUS ────────────────────┐
+│ Borrower ID      : ST001                                       │
+│ Account Type     : STUDENT                                     │
+│ Quota Progress   : 0 / 3 Books (3 remaining)                   │
+├────────────────────────────────────────────────────────────────┤
+│   Active Loans   : (None - 0 active loans)                     │
+├────────────────────────────────────────────────────────────────┤
+│  ⚠️ OVERDUE CONSEQUENCES & RULES:                              │
+│   • Fine Rate  : $1.00/day (Student) | $0.50/day (Staff)       │
+│   • Penalties  : Overdue accounts are SUSPENDED from borrowing │
+│                  until all past-due items are returned.        │
+└────────────────────────────────────────────────────────────────┘
+
+------------------------------------------------------------------
+[b]orrow, [r]eturn, [s]earch, [l]ist books, [a]ccount status, or [q]uit: 
+Select Borrower Category:
+  [1] Student  (Loan period: 14 days, Quota limit: 3 books)
+  [2] Staff    (Loan period: 28 days, Quota limit: 5 books)
+Is the borrower a Student or Staff member? (1 for Student / 2 for Staff): Enter Borrower ID (e.g. ST001): 
+Enter BookItem ID to borrow (e.g. BI001 to BI100): 
+┌─ 🔍 CHECKING BOOK AVAILABILITY & BORROWER ELIGIBILITY ──────────┐
+│ Book Item ID     : BI001                                       │
+│ Book Title       : Clean Code: A Handbook of Agile Software C  │
+│ Book Status      : AVAILABLE (Available)                       │
+│ Borrower ID      : ST001 (STUDENT)                             │
+│ Quota Progress   : 0 / 3 Active Loans (3 remaining)            │
+│ Book Available?  : YES ✅                                       │
+│ Borrower Eligible?: YES ✅                                      │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ ✅ TRANSACTION SUCCESS: BOOK BORROWED ─────────────────────────┐
+│ Borrower ID      : ST001 (STUDENT)                             │
+│ Book Item ID     : BI001                                       │
+│ Book Title       : Clean Code: A Handbook of Agile Software C  │
+│ Quota Progress   : 1 / 3 Active Loans (2 remaining)            │
+├────────────────────────────────────────────────────────────────┤
+│  ⏰ DUE DATE NOTIFICATION:                                      │
+│   • Return Deadline : 2026-10-21                               │
+│   • Overdue Policy  : Fines accrue at $1.00/day after deadline. │
+│   • Late Penalty    : Account suspended if return is overdue.  │
+└────────────────────────────────────────────────────────────────┘
+
+------------------------------------------------------------------
+[b]orrow, [r]eturn, [s]earch, [l]ist books, [a]ccount status, or [q]uit: Enter Borrower ID (e.g. ST001 for Student, SF001 for Staff): 
+┌─ 👤 BORROWER ACCOUNT DETAILS & QUOTA STATUS ────────────────────┐
+│ Borrower ID      : ST001                                       │
+│ Account Type     : STUDENT                                     │
+│ Quota Progress   : 1 / 3 Books (2 remaining)                   │
+├────────────────────────────────────────────────────────────────┤
+│   Active Loans (1 on loan):                                    │
+│    • [BI001] 'Clean Code: A Handbook of ' | Due: 2026-10-21    │
+├────────────────────────────────────────────────────────────────┤
+│  ⚠️ OVERDUE CONSEQUENCES & RULES:                              │
+│   • Fine Rate  : $1.00/day (Student) | $0.50/day (Staff)       │
+│   • Penalties  : Overdue accounts are SUSPENDED from borrowing │
+│                  until all past-due items are returned.        │
+└────────────────────────────────────────────────────────────────┘
+
+------------------------------------------------------------------
+[b]orrow, [r]eturn, [s]earch, [l]ist books, [a]ccount status, or [q]uit: Enter Borrower ID (e.g. ST001, SF001): Enter BookItem ID (e.g. BI001 to BI100): 
+┌─ 📩 OFFICIAL NOTIFICATION: RETURN COMPLIANCE CONFIRMED ─────────┐
+│ Borrower ID      : ST001                                       │
+│ Return Status    : ON-TIME RETURN (ON OR BEFORE DUE DATE)      │
+│ Due Date         : 2026-10-21                                  │
+│ Return Date      : 2026-10-07                                  │
+│ Fine Accrued     : $0.00 (No Penalties Assessed)               │
+│  Notification  : Thank you for returning the book on time!     │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ ✅ TRANSACTION SUCCESS: BOOK RETURNED ─────────────────────────┐
+│ Borrower ID      : ST001                                       │
+│ Book Item ID     : BI001                                       │
+│ Book Title       : Clean Code: A Handbook of Agile Software C  │
+│ Book Status      : AVAILABLE (Restored to Library Inventory)   │
+│ Updated Quota    : 0 / 3 Active Loans (3 remaining quota)      │
+└────────────────────────────────────────────────────────────────┘
+
+------------------------------------------------------------------
+[b]orrow, [r]eturn, [s]earch, [l]ist books, [a]ccount status, or [q]uit: Enter Borrower ID (e.g. ST001 for Student, SF001 for Staff): 
+┌─ 👤 BORROWER ACCOUNT DETAILS & QUOTA STATUS ────────────────────┐
+│ Borrower ID      : ST001                                       │
+│ Account Type     : STUDENT                                     │
+│ Quota Progress   : 0 / 3 Books (3 remaining)                   │
+├────────────────────────────────────────────────────────────────┤
+│   Active Loans   : (None - 0 active loans)                     │
+├────────────────────────────────────────────────────────────────┤
+│  ⚠️ OVERDUE CONSEQUENCES & RULES:                              │
+│   • Fine Rate  : $1.00/day (Student) | $0.50/day (Staff)       │
+│   • Penalties  : Overdue accounts are SUSPENDED from borrowing │
+│                  until all past-due items are returned.        │
+└────────────────────────────────────────────────────────────────┘
+
+------------------------------------------------------------------
+[b]orrow, [r]eturn, [s]earch, [l]ist books, [a]ccount status, or [q]uit: Exiting Library Borrowing System. Goodbye!
